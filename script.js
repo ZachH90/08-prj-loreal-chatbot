@@ -131,12 +131,28 @@ chatForm.addEventListener("submit", async (e) => {
     }
 
     const data = await response.json();
-    if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+
+    if (data.error) {
+      const apiError =
+        typeof data.error === "string"
+          ? data.error
+          : data.error.message || "Unknown API error.";
+      throw new Error(apiError);
+    }
+
+    // Primary format for OpenAI Chat Completions.
+    let aiReply = data?.choices?.[0]?.message?.content;
+
+    // Fallback format if the worker is switched to Responses API later.
+    if (!aiReply && data?.output_text) {
+      aiReply = data.output_text;
+    }
+
+    if (!aiReply) {
       throw new Error(
-        "The worker returned a response, but it did not include a chat message.",
+        "The worker returned a response, but no assistant text was found.",
       );
     }
-    const aiReply = data.choices[0].message.content;
 
     addMessage("ai", aiReply);
     chatHistory.push({ role: "assistant", content: aiReply });
